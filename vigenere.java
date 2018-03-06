@@ -6,10 +6,38 @@ public class vigenere {
 
   // PRNG
   private static Random rand = new Random ();
-  // Frecuencias
+  // Frecuencias (posición 26 para 'Ñ')
   private static double[] q = new double[27];
+  // Umbral de aproximación
+  private static double EPS = 0.001;
   /** Índice de coincidencias del idioma español. */
-  public static double ICE = 0.0741;
+  public static final double ICE = 0.0741;
+
+  /* Calcula las frecuencias del bloque B y las escribe en q. */
+  private static void frecuencias (String B) {
+    // Limpiamos q
+    Arrays.fill (q, 0.0);
+    int k = B.length ();
+    for (int i = 0; i < k; i++) {
+      char ci = B.charAt (i);
+      int s = ci == 'Ñ' ? 26 : (int) (ci - 'A');
+      q[s]++;
+    }
+    for (int i = 0; i < 27; i++)
+      q[i] /= k;
+  }
+
+  /* Calcula el bloque COL del texto C dividido en periodos de longitud T. */
+  private static String bloque (String C, int t, int col) {
+    int l = C.length ();
+    // Longitud del bloque B
+    int k = l % t > col ? l/t + 1 : l/t;
+    char[] chars = new char[k];
+    for (int i = 0; i < k; i++)
+      chars[i] = C.charAt (i*t + col);
+    // Bloque B = c{0+r}c{t+r}c{2t+r}...
+    return new String (chars);
+  }
 
   public static int longitudClave (String C) {
     // Criptotexto de entrada C = c0c1...cn
@@ -19,35 +47,22 @@ public class vigenere {
     for (int t = 1; t <= l; t++) {
       // Bloque r aleatorio
       int r = rand.nextInt(t);
-      // Longitud del bloque Br
-      int k = l % t > r ? l/t + 1 : l/t;
-      char[] chars = new char[k];
-      for (int i = 0; i < k; i++)
-        chars[i] = C.charAt (i*t + r);
-      // Bloque Br = c{0+r}c{t+r}c{2t+r}...
-      String Br = new String (chars);
+      String Br = vigenere.bloque (C, t, r);
       // Contamos frecuencias de cada letra del alfabeto
-      Arrays.fill (q, 0.0);
-      for (int i = 0; i < k; i++) {
-        char ci = Br.charAt (i);
-        int s = ci == 'Ñ' ? 26 : (int) (ci - 'A');
-        q[s]++;
-      }
-      for (int i = 0; i < 27; i++)
-        q[i] /= k;
+      vigenere.frecuencias (Br);
       // Calculamos I
       double I = 0.0;
       for (double qi : q)
         I += qi*qi;
       // Valor de t que aproxima la longitud de la clave
       System.out.printf("%f\n",I);
-      if (Math.abs (I - vigenere.ICE) < 0.001)
+      if (Math.abs (I - vigenere.ICE) < vigenere.EPS)
         return t;
     }
     return l;
   }
 
-  public static int desplazamiento (String B) {
+  public static int desplazamiento (int longitud) {
     
   }
 
