@@ -8,6 +8,8 @@ public class vigenere {
   private static Random rand = new Random ();
   // Frecuencias (posición 26 para 'Ñ')
   private static double[] q = new double[27];
+  // Frecuencias de las letras en español
+  private static double[] p = null;
   // Umbral de aproximación
   private static double EPS = 0.001;
   /** Índice de coincidencias del idioma español. */
@@ -62,8 +64,19 @@ public class vigenere {
     return l;
   }
 
-  public static int desplazamiento (int longitud) {
-    
+  public static int desplazamiento (String B) {
+    // Frecuencias en el bloque B
+    vigenere.frecuencias (B);
+    for (int k = 0; k < 27; k++) {
+      double Ik = 0.0;
+      for (int j = 0; j < 27; j++)
+        Ik += p[j]*q[(j+k) % 27]
+      // Valor de k que aproxima la longitud de la clave
+      System.out.printf("%f\n",Ik);
+      if (Math.abs (Ik - vigenere.ICE) < vigenere.EPS)
+        return k;
+    }
+    return 0;
   }
 
   public static void main (String[] args) {
@@ -76,9 +89,19 @@ public class vigenere {
       // Peor de los casos, 1 caracter por byte
       char[] stream = new char[(int) file.length()];
       reader.read (stream);
+      // Texto cifrado
       String cifrado = new String (stream).replaceAll ("[^A-ZÑ]","");
       reader.close();
-      System.out.printf("%d\n",vigenere.longitudClave (cifrado));
+      // Obtener longitud de la clave
+      int longitud = vigenere.longitudClave (cifrado);
+      System.out.printf("%d\n",longitud);
+      // Descrifrar bloques
+      for (int r = 0; r < longitud; r++) {
+        // Bloque Br a descifrar
+        String Br = vigenere.bloque (cifrado, longitud, r);
+        // Desplazamiento
+        int d = vigenere.desplazamiento (Br);
+      }
     } catch (IOException e) {
       e.printStackTrace ();
     }
