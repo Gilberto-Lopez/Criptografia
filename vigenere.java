@@ -25,6 +25,18 @@ public class vigenere {
       p[i] /= 99.96;
   }
 
+  /* Determina el índice de un caracter C (A ... N Ñ O ... Z) en
+   * ese orden. */
+  private static int indice (char c) {
+    return c == 'Ñ' ? 14 : (c <= 'N' ? c - 'A' : c - 'A' + 0x0001);
+  }
+
+  /* Dado un índice I (0,1,...,26), determina el caracter que representa. */
+  private static char caracter (int i) {
+    int j = i == 14 ? 'Ñ' : (i <= 13 ? i + 'A' : i + 'A' - 0x0001);
+    return (char)j;
+  }
+
   /* Calcula las frecuencias del bloque B y las escribe en q. */
   private static void frecuencias (String B) {
     // Limpiamos q
@@ -32,8 +44,7 @@ public class vigenere {
     int k = B.length ();
     for (int i = 0; i < k; i++) {
       char ci = B.charAt (i);
-      int s = ci == 'Ñ' ? 14 : (ci <= 'N' ? ci - 'A' : ci - 'A' + 0x0001);
-      q[s]++;
+      q[vigenere.indice (ci)]++;
     }
     for (int i = 0; i < 27; i++)
       q[i] /= k;
@@ -73,7 +84,7 @@ public class vigenere {
       for (double qi : q)
         I += qi*qi;
       // Valor de t que aproxima la longitud de la clave
-      if (Math.abs (I - vigenere.ICE) < 0.0001)
+      if (Math.abs (I - vigenere.ICE) < 0.001)
         return t;
     }
     return l;
@@ -87,15 +98,20 @@ public class vigenere {
   public static int desplazamiento (String B) {
     // Frecuencias en el bloque B
     vigenere.frecuencias (B);
+    int d = 0;
+    double dif = 1.0;
     for (int k = 0; k < 27; k++) {
       double Ik = 0.0;
       for (int i = 0; i < 27; i++)
         Ik += p[i]*q[(i+k) % 27];
       // Valor de k que aproxima el desplazamiento
-      if (Math.abs (Ik - vigenere.ICE) < 0.001)
-        return k;
+      double approx = Math.abs (Ik - vigenere.ICE);
+      if (approx < dif){
+        d = k;
+        dif = approx;
+      }
     }
-    return 0;
+    return d;
   }
 
   /* Punto de entrada del programa. */
@@ -115,14 +131,13 @@ public class vigenere {
       reader.close();
       // Obtener longitud de la clave
       int longitud = vigenere.longitudClave (cifrado);
-      System.out.printf("%d\n",longitud);
       // Descrifrar bloques
+      int[] llave = new int[longitud];
       for (int r = 0; r < longitud; r++) {
         // Bloque Br a descifrar
         String Br = vigenere.bloque (cifrado, longitud, r);
         // Desplazamiento
-        int d = vigenere.desplazamiento (Br);
-        System.out.printf("%d\n",d);
+        llave[r] = vigenere.desplazamiento (Br);
       }
     } catch (IOException e) {
       e.printStackTrace ();
