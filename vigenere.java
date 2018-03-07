@@ -2,18 +2,28 @@ import java.io.*;
 import java.util.Arrays;
 import java.util.Random;
 
+/* Criptoanálisis para textos cifrados usando el cifrado de Vigenere. */
 public class vigenere {
 
   // PRNG
   private static Random rand = new Random ();
-  // Frecuencias (posición 26 para 'Ñ')
+  // Frecuencias A ... N Ñ O ... Z
   private static double[] q = new double[27];
   // Frecuencias de las letras en español
-  private static double[] p = null;
+  // Fuente: https://www.sttmedia.com/characterfrequency-spanish
+  // Suma 99.96
+  private static double[] p = {12.16,1.49,3.87,4.67,14.08,0.69,1.00,1.18,5.98,0.52,0.11,5.24,3.08,6.83,0.17,
+    9.2,2.89,1.11,6.41,7.20,4.60,4.69,1.05,0.04,0.14,1.09,0.47};
   // Umbral de aproximación
-  private static double EPS = 0.001;
+  private static double EPS = 0.0001;
   /** Índice de coincidencias del idioma español. */
   public static final double ICE = 0.0741;
+
+  /* Normalizamos los porcentajes de p. */
+  private static void normaliza () {
+    for (int i = 0; i < 27; i++)
+      p[i] /= 99.96;
+  }
 
   /* Calcula las frecuencias del bloque B y las escribe en q. */
   private static void frecuencias (String B) {
@@ -22,14 +32,15 @@ public class vigenere {
     int k = B.length ();
     for (int i = 0; i < k; i++) {
       char ci = B.charAt (i);
-      int s = ci == 'Ñ' ? 26 : (int) (ci - 'A');
+      int s = ci == 'Ñ' ? 14 : (ci <= 'N' ? ci - 'A' : ci - 'A' + 0x0001);
       q[s]++;
     }
     for (int i = 0; i < 27; i++)
       q[i] /= k;
   }
 
-  /* Calcula el bloque COL del texto C dividido en periodos de longitud T. */
+  /* Calcula el bloque (columna) COL del texto C, dividido en periodos de
+   * longitud T. */
   private static String bloque (String C, int t, int col) {
     int l = C.length ();
     // Longitud del bloque B
@@ -37,10 +48,15 @@ public class vigenere {
     char[] chars = new char[k];
     for (int i = 0; i < k; i++)
       chars[i] = C.charAt (i*t + col);
-    // Bloque B = c{0+r}c{t+r}c{2t+r}...
+    // Bloque B = c{0+col}c{t+col}c{2t+col}...
     return new String (chars);
   }
 
+  /**
+   * Estima la longitud de la clave usada para cifrar el texto.
+   * @param C El texto cifrado.
+   * @return La aproximación de la longitud de la clave.
+   */
   public static int longitudClave (String C) {
     // Criptotexto de entrada C = c0c1...cn
     // n + 1 = l
@@ -57,31 +73,36 @@ public class vigenere {
       for (double qi : q)
         I += qi*qi;
       // Valor de t que aproxima la longitud de la clave
-      System.out.printf("%f\n",I);
-      if (Math.abs (I - vigenere.ICE) < vigenere.EPS)
+      if (Math.abs (I - vigenere.ICE) < 0.0001)
         return t;
     }
     return l;
   }
 
+  /**
+   * Estima el desplazamiento usado para cifrar el bloque.
+   * @param B El bloque a descifrar.
+   * @return El desplzamiento usado para cifrar el bloque.
+   */
   public static int desplazamiento (String B) {
     // Frecuencias en el bloque B
     vigenere.frecuencias (B);
     for (int k = 0; k < 27; k++) {
       double Ik = 0.0;
-      for (int j = 0; j < 27; j++)
-        Ik += p[j]*q[(j+k) % 27]
-      // Valor de k que aproxima la longitud de la clave
-      System.out.printf("%f\n",Ik);
-      if (Math.abs (Ik - vigenere.ICE) < vigenere.EPS)
+      for (int i = 0; i < 27; i++)
+        Ik += p[i]*q[(i+k) % 27];
+      // Valor de k que aproxima el desplazamiento
+      if (Math.abs (Ik - vigenere.ICE) < 0.001)
         return k;
     }
     return 0;
   }
 
+  /* Punto de entrada del programa. */
   public static void main (String[] args) {
     if (0 == args.length)
       return;
+    vigenere.normaliza();
     try {
       File file = new File (args[0]);
       // Leemos el archivo de entrada en codificación UTF8
@@ -101,6 +122,7 @@ public class vigenere {
         String Br = vigenere.bloque (cifrado, longitud, r);
         // Desplazamiento
         int d = vigenere.desplazamiento (Br);
+        System.out.printf("%d\n",d);
       }
     } catch (IOException e) {
       e.printStackTrace ();
