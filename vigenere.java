@@ -1,6 +1,7 @@
 import java.io.*;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.LinkedList;
 
 /* Criptoanálisis para textos cifrados usando el cifrado de Vigenere. */
 public class vigenere {
@@ -14,8 +15,8 @@ public class vigenere {
   // Suma 99.96
   private static double[] p = {12.16,1.49,3.87,4.67,14.08,0.69,1.00,1.18,5.98,0.52,0.11,5.24,3.08,6.83,0.17,
     9.2,2.89,1.11,6.41,7.20,4.60,4.69,1.05,0.04,0.14,1.09,0.47};
-  // Umbral de aproximación
-  private static double EPS = 0.0001;
+  // Umbral de aproximación de la longitud de la clave
+  private static double EPS = 0.001;
   /** Índice de coincidencias del idioma español. */
   public static final double ICE = 0.0741;
 
@@ -84,7 +85,7 @@ public class vigenere {
       for (double qi : q)
         I += qi*qi;
       // Valor de t que aproxima la longitud de la clave
-      if (Math.abs (I - vigenere.ICE) < 0.001)
+      if (Math.abs (I - vigenere.ICE) < vigenere.EPS)
         return t;
     }
     return l;
@@ -114,6 +115,32 @@ public class vigenere {
     return d;
   }
 
+  /**
+   * Escribe en pantalla el texto C descifrado usando la llave K.
+   * @param C El texto cifrado.
+   * @param k La llave.
+   */
+  public static void descifrar (String C, int[] k) {
+    System.out.print ("Clave: ");
+    for (int c : k)
+      System.out.print (vigenere.caracter(c));
+    System.out.print("\n");
+    int l = k.length;
+    int m = Math.min (50, C.length());
+    int j = 0;
+    for (int i = 0; j < m; i++) {
+      char ci = C.charAt(i);
+      if (ci == 'Ñ' || (ci >= 'A' && ci <= 'Z')) {
+        int di = vigenere.indice(ci);
+        System.out.print (vigenere.caracter(di-k[j%l]%27));
+        j++;
+      } else {
+        System.out.print (ci);
+      }
+    }
+    System.out.print("\n");
+  }
+
   /* Punto de entrada del programa. */
   public static void main (String[] args) {
     if (0 == args.length)
@@ -129,15 +156,21 @@ public class vigenere {
       // Texto cifrado
       String cifrado = new String (stream).replaceAll ("[^A-ZÑ]","");
       reader.close();
-      // Obtener longitud de la clave
-      int longitud = vigenere.longitudClave (cifrado);
-      // Descrifrar bloques
-      int[] llave = new int[longitud];
-      for (int r = 0; r < longitud; r++) {
-        // Bloque Br a descifrar
-        String Br = vigenere.bloque (cifrado, longitud, r);
-        // Desplazamiento
-        llave[r] = vigenere.desplazamiento (Br);
+      // Obtener longitud de la clave (las 3 mejores)
+      LinkedList<Integer> longitudes = new LinkedList<>();
+      for (int i = 0; i < 3; i++)
+        longitudes.add(vigenere.longitudClave (cifrado));
+      // Desciframos usando las mejores longitudes y llaves
+      for (int longitud : longitudes) {
+        // Descrifrar bloques
+        int[] llave = new int[longitud];
+        for (int r = 0; r < longitud; r++) {
+          // Bloque Br a descifrar
+          String Br = vigenere.bloque (cifrado, longitud, r);
+          // Desplazamiento del bloque
+          llave[r] = vigenere.desplazamiento (Br);
+        }
+        vigenere.descifrar (cifrado, llave);
       }
     } catch (IOException e) {
       e.printStackTrace ();
