@@ -66,6 +66,8 @@ public class vigenere {
 
   /**
    * Estima la longitud de la clave usada para cifrar el texto.
+   * Método no determinista, estima la clave usando el índice de coincidencias
+   * de un bloque aleatorio.
    * @param C El texto cifrado.
    * @return La aproximación de la longitud de la clave.
    */
@@ -132,13 +134,17 @@ public class vigenere {
       char ci = C.charAt(i);
       if (ci == 'Ñ' || (ci >= 'A' && ci <= 'Z')) {
         int di = vigenere.indice(ci);
-        System.out.print (vigenere.caracter(di-k[j%l]%27));
+        // -1 % n = -1 en Java
+        int index = di-k[j%l];
+        while (index < 0)
+          index += 27;
+        System.out.print (vigenere.caracter(index%27));
         j++;
       } else {
         System.out.print (ci);
       }
     }
-    System.out.print("\n");
+    System.out.print("...\n");
   }
 
   /* Punto de entrada del programa. */
@@ -154,9 +160,12 @@ public class vigenere {
       char[] stream = new char[(int) file.length()];
       reader.read (stream);
       // Texto cifrado
-      String cifrado = new String (stream).replaceAll ("[^A-ZÑ]","");
+      String cifrado_original = new String (stream);
+      String cifrado = cifrado_original.replaceAll ("[^A-ZÑ]","");
       reader.close();
       // Obtener longitud de la clave (las 3 mejores)
+      // Como longitudClave es no determinista no siempre se obtiene la misma
+      // longitud
       LinkedList<Integer> longitudes = new LinkedList<>();
       for (int i = 0; i < 3; i++)
         longitudes.add(vigenere.longitudClave (cifrado));
@@ -170,7 +179,7 @@ public class vigenere {
           // Desplazamiento del bloque
           llave[r] = vigenere.desplazamiento (Br);
         }
-        vigenere.descifrar (cifrado, llave);
+        vigenere.descifrar (cifrado_original, llave);
       }
     } catch (IOException e) {
       e.printStackTrace ();
